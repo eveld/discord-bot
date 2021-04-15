@@ -16,7 +16,7 @@ import (
 const Version = "v0.0.0-alpha"
 
 const (
-	MessageCreateFunc = "hello"
+	MessageCreateFunc = "message_create"
 )
 
 var Token string
@@ -34,10 +34,10 @@ func init() {
 	}
 
 	plugins = []Plugin{
-		Plugin{
-			Name:    "hello",
+		{
+			Name:    "profanity",
 			Version: "v0.0.1",
-			Path:    "hello.wasm",
+			Path:    "plugins/profanity/module.wasm",
 			Events:  []discordgo.Intent{discordgo.IntentsGuildMessages},
 		},
 	}
@@ -47,6 +47,7 @@ func init() {
 
 func main() {
 	log := hclog.Default()
+	log.SetLevel(hclog.Info)
 
 	var err error
 
@@ -66,16 +67,23 @@ func main() {
 	}
 
 	pipeline = wasp.New(logger.New(log.Info, log.Debug, log.Error, log.Trace))
-	pipeline.AddCallback("plugin", "call_me", callMe)
+
+	callbacks := &wasp.Callbacks{}
+	callbacks.AddCallback("env", "send_channel_message", sendChannelMessage)
+	callbacks.AddCallback("env", "delete_channel_message", deleteChannelMessage)
+
+	pluginConfig := &wasp.PluginConfig{
+		Callbacks: callbacks,
+	}
 
 	// Read configured plugins from configuration file
 	// Loop over the plugins
 	// Register each of the plugins
 	for _, plugin := range plugins {
-		err = pipeline.RegisterPlugin(plugin.Name, plugin.Path, nil)
+		err = pipeline.RegisterPlugin(plugin.Name, plugin.Path, pluginConfig)
 		if err != nil {
 			log.Error("Error loading plugin", "error", err)
-			os.Exit(1)
+			break
 		}
 
 		for _, event := range plugin.Events {
@@ -107,14 +115,25 @@ func main() {
 }
 
 func presenceUpdate(s *discordgo.Session, m *discordgo.PresenceUpdate) {
-	fmt.Printf("%#v", m)
+	fmt.Printf("%s(%s)(bot? %t) is now %s\n", m.User.ID, m.User.Username, m.User.Bot, m.Status)
 }
 
-func callMe(in string) string {
-	out := fmt.Sprintf("Hello %s", in)
-	fmt.Println(out)
+func sendChannelMessage(channel string, content string) int32 {
+	_, err := Session.ChannelMessageSend(channel, content)
+	if err != nil {
+		return 1
+	}
 
-	return out
+	return 0
+}
+
+func deleteChannelMessage(channel string, id string) int32 {
+	err := Session.ChannelMessageDelete(channel, id)
+	if err != nil {
+		return 1
+	}
+
+	return 0
 }
 
 // This function will be called every time a new message is
@@ -133,16 +152,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		defer instance.Remove()
 
-		fmt.Printf("%#v", instance)
-
-		var output string
-		err = instance.CallFunction(MessageCreateFunc, &output, m.Author.Username)
+		err = instance.CallFunction(MessageCreateFunc, nil, m.ChannelID, m.Author.Username, m.ID, m.Content)
 		if err != nil {
 			fmt.Println("Error calling plugin function", "error", err)
 		}
-
-		fmt.Printf("%#v", output)
-
-		s.ChannelMessageSend(m.ChannelID, output)
 	}
 }

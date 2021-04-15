@@ -122,19 +122,19 @@ func intFunc(a, b int) int {
 	return a + b
 }
 
-////export call_me
-//func callMe(in WasmString) WasmString
-//
-////go:export callback
-//func callback() WasmString {
-//	fmt.Println("Running Function")
-//	// get the string from the memory pointer
-//	name := WasmString(0)
-//	name.Copy("Nic")
-//
-//	s := callMe(name)
-//	//s := WasmString(0)
-//	//s.Copy("Hello")
-//
-//	return s // WasmString(0)
-//}
+// //export call_me
+// func callMe(in WasmString) WasmString
+
+// //go:export callback
+// func callback() WasmString {
+// 	fmt.Println("Running Function")
+// 	// get the string from the memory pointer
+// 	name := WasmString(0)
+// 	name.Copy("Nic")
+
+// 	s := callMe(name)
+// 	//s := WasmString(0)
+// 	//s.Copy("Hello")
+
+// 	return s // WasmString(0)
+// }
