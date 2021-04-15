@@ -1,17 +1,11 @@
 package main
 
-import "C"
 import (
 	"strings"
 
+	discord "github.com/eveld/discord-bot/abi"
 	abi "github.com/nicholasjackson/wasp/go-abi"
 )
-
-//export send_channel_message
-func sendMessage(channel abi.WasmString, content abi.WasmString) int32
-
-//export delete_channel_message
-func deleteMessage(channel abi.WasmString, id abi.WasmString) int32
 
 func main() {}
 
@@ -62,19 +56,19 @@ func isProfane(s string) bool {
 }
 
 //go:export message_create
-func ReplaceBadWords(channel abi.WasmString, author abi.WasmString, id abi.WasmString, content abi.WasmString) {
+func MessageCreate(channel abi.WasmString, author abi.WasmString, id abi.WasmString, content abi.WasmString) {
 	// get the string from the memory pointer
 	a := author.String()
 	s := content.String()
 
 	if isProfane(s) {
-		err := deleteMessage(channel, id)
+		err := discord.DeleteMessage(channel, id)
 		if err != 0 {
 			abi.Error("Could not delete message")
 		}
 
 		naughty := abi.String(a + " is naughty...")
-		err = sendMessage(channel, naughty)
+		err = discord.SendMessage(channel, naughty)
 		if err != 0 {
 			abi.Error("Could not send message")
 		}
